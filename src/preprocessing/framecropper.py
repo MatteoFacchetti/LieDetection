@@ -33,7 +33,6 @@ for label in [0, 1]:
         print("[INFO] Found {0} Faces.".format(len(faces)))
 
         for (x, y, w, h) in faces:
-            #cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
             roi_color = image[y:y + h, x:x + w]
             print("[INFO] Object found. Saving locally.")
             cv2.imwrite(f'./{label}_crop/{w}{h}_{img_name}', roi_color)

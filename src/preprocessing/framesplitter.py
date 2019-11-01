@@ -5,6 +5,7 @@ import pandas as pd
 
 annotations = pd.read_csv("Annotations.csv")
 
+
 # script divides videos in frames given a path that contains a "video.mp4" file
 def getframes(folderpath):
     vidcap = cv2.VideoCapture(folderpath + "video.mp4")
@@ -25,13 +26,14 @@ def getframes(folderpath):
         success,image = vidcap.read()
         count += 1
 
+
 for i, folderpath in enumerate(annotations.video):
     getframes(folderpath.replace("video.mp4", ""))
     if (i+1)%10 == 0:
         print(f"done with the {i+1}th folderpath")
 
 
-#then distribute the frames in two folders
+# then distribute the frames in two folders
 for label in [0, 1]:
     try:    
         shutil.rmtree(f"{label}")
