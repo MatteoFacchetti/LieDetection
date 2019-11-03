@@ -1,3 +1,7 @@
+train: '../../data/train'
+
+test: '../../data/test'
+
 test_videos:
   - 5
   - 11
