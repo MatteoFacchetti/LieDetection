@@ -2,7 +2,7 @@ import os
 import shutil
 import pandas as pd
 
-from utils.file_utils import getframes
+from utils.preprocessing import getframes
 
 annotations = pd.read_csv("../../data/Annotations.csv")
 
