@@ -1,9 +1,11 @@
 import logging
 import os
-import matplotlib.pyplot as plt
+import numpy as np
 
 import cv2
 from imutils import paths
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.model_selection import train_test_split
 
 from utils import file_utils
 
@@ -20,7 +22,7 @@ image_paths = list(paths.list_images(train))
 data = []
 labels = []
 
-# TODO: Loop over the image paths
+# Loop over the image paths
 for image_path in image_paths:
     # Extract the class label from the filename
     label = image_path.split(os.path.sep)[-2]
@@ -30,14 +32,21 @@ for image_path in image_paths:
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, (224, 224))
-    b, g, r = cv2.split(image)
-    frame_rgb = cv2.merge((r, g, b))
-    plt.imshow(frame_rgb)
-    plt.title('Matplotlib')  # Give this plot a title,
-    # so I know it's from matplotlib and not cv2
-    plt.show()
-    break
 
-    # Update data and labels
+    # Update data and label lists
     data.append(image)
     labels.append(label)
+logging.info("Images loaded successfully.")
+
+# Convert data and labels to numpy arrays
+data = np.array(data)
+labels = np.array(labels)
+
+# Perform one-hot encoding on the labels
+lb = LabelBinarizer()
+labels = lb.fit_transform(labels)
+
+# Train-test split (80%-20%)
+(X_train, X_test, y_train, y_test) = train_test_split(data, labels, test_size=0.2, stratify=labels, random_state=42)
+
+# Initialize data augmentation object
