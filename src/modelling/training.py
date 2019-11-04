@@ -46,7 +46,7 @@ labels = np.array(labels)
 lb = LabelBinarizer()
 labels = lb.fit_transform(labels)
 
-# Train-test split (80%-20%)
+# TODO: Train-test split (80%-20%) - Forse non serve, avendo già splittato a monte
 (X_train, X_test, y_train, y_test) = train_test_split(data, labels, test_size=0.2, stratify=labels, random_state=42)
 
-# Initialize data augmentation object
+# TODO: Initialize data augmentation object
