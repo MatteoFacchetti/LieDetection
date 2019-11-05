@@ -2,6 +2,14 @@ train: '../data/train' # Input train data for preprocessing and modelling
 
 test: '../data/test' # Input test data for preprocessing and modelling
 
+modelling:
+  model_name: 'ResNet50'
+  epochs: 50
+
+evaluation:
+  plot: 'evaluation/plots'
+  plot_to_file: True
+
 test_videos:
   - 5
   - 11
