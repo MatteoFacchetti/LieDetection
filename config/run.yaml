@@ -1,6 +1,6 @@
-train: '../../data/train'
+train: '../data/train' # Input train data for preprocessing and modelling
 
-test: '../../data/test'
+test: '../data/test' # Input test data for preprocessing and modelling
 
 test_videos:
   - 5
