@@ -27,11 +27,13 @@ def main(run_config):
     test_frames = list(itertools.chain(*test_frames))
 
     # Move test frames to the test folder
+    logger.info(f"Moving {len(test_frames)} files...")
     for frame in test_frames:
         try:
             os.rename(f"{train_path}/1_crop/{frame}", f"{test_path}/1_crop/{frame}")
         except FileNotFoundError:
             os.rename(f"{train_path}/0_crop/{frame}", f"{test_path}/0_crop/{frame}")
+    logger.info(f"{len(test_frames)} files moved successfully.")
 
 
 if __name__ == '__main__':

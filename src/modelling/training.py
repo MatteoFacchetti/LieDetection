@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import random
+import warnings
 
 import cv2
 from imutils import paths
@@ -42,18 +43,17 @@ def main(run_config):
     sample_mode = run_cfg["modelling"]["sample_mode"]
     data_augmentation = run_cfg["modelling"]["data_augmentation"]
     image_size = tuple(run_cfg["modelling"]["image_size"])
-    print(type(image_size[0:2]))
-    print(image_size[0:2])
 
     # Grab the list of images and initialize the lists data and images
     logger.info("Loading images...")
     image_paths = list(paths.list_images(train))
+    image_paths = [image for i, image in enumerate(image_paths) if i % 3 == 0]
     if sample_mode:
         n_frames = 100
         epochs = 5
         image_paths = random.choices(image_paths, k=n_frames)
     else:
-        n_frames = 88017
+        n_frames = len(image_paths)
         epochs = run_cfg["modelling"]["epochs"]
     data = []
     labels = []
@@ -114,9 +114,9 @@ def main(run_config):
 
     # Load ResNet-50 network for fine tuning
     logger.info("Building the model...")
-    base_model = ResNet50(weights="imagenet", include_top=False, input_tensor=Input(shape=image_size))
+    base_model = ResNet50(weights="imagenet", include_top=False, input_tensor=Input(shape=image_size[0:3]))
     head_model = base_model.output
-    head_model = AveragePooling2D(pool_size=(7, 7))(head_model)
+    head_model = AveragePooling2D(pool_size=image_size[3:5])(head_model)
     head_model = Flatten(name="flatten")(head_model)
     head_model = Dense(512, activation="relu")(head_model)
     head_model = Dropout(0.5)(head_model)
@@ -182,5 +182,6 @@ def main(run_config):
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level=logging.INFO, format=log_fmt)
+    warnings.filterwarnings('ignore', category=FutureWarning)
 
     main()

@@ -5,11 +5,13 @@ test: '../data/test'        # Input test data for preprocessing and modelling
 modelling:
   model_name: 'ResNet50'
   epochs: 50                # Number of epochs
-  image_size:               # Image size
-  - 224
-  - 224
-  - 3
-  sample_mode: True         # True if you want to run the model on a limited amount of data, otherwise False
+  image_size:
+  - 224                     # Image size 1
+  - 224                     # Image size 2
+  - 3                       # Image size 3
+  - 7                       # Pool size 1
+  - 7                       # Pool size 2
+  sample_mode: False        # True if you want to run the model on a limited amount of data, otherwise False
   data_augmentation: True   # True if you want to perform data augmentation, otherwise False
 
 evaluation:
