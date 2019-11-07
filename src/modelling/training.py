@@ -40,6 +40,10 @@ def main(run_config):
     plot_path = run_cfg["evaluation"]["plot"]
     model_name = run_cfg["modelling"]["model_name"]
     sample_mode = run_cfg["modelling"]["sample_mode"]
+    data_augmentation = run_cfg["modelling"]["data_augmentation"]
+    image_size = tuple(run_cfg["modelling"]["image_size"])
+    print(type(image_size[0:2]))
+    print(image_size[0:2])
 
     # Grab the list of images and initialize the lists data and images
     logger.info("Loading images...")
@@ -64,7 +68,7 @@ def main(run_config):
         # Load the image (reshape e rimappare i colori in base al pretrained model che andiamo a usare)
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, (224, 224))
+        image = cv2.resize(image, image_size[0:2])
 
         # Update data and label lists
         data.append(image)
@@ -87,17 +91,19 @@ def main(run_config):
     (X_train, X_test, y_train, y_test) = train_test_split(data, labels, test_size=0.2, stratify=labels, random_state=42)
 
     # Initialize training data augmentation object
-    logger.info("Performing data augmentation...")
-    train_aug = ImageDataGenerator(
-        rotation_range=30,
-        zoom_range=0.15,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        shear_range=0.15,
-        fill_mode="nearest"
-    )
-
-    # Initialize testing data augmentation object
+    if data_augmentation:
+        logger.info("Performing data augmentation...")
+        train_aug = ImageDataGenerator(
+            rotation_range=30,
+            zoom_range=0.15,
+            width_shift_range=0.2,
+            height_shift_range=0.2,
+            shear_range=0.15,
+            fill_mode="nearest"
+        )
+    else:
+        logger.info("Data augmentation not performed")
+        train_aug = ImageDataGenerator()
     test_aug = ImageDataGenerator()
 
     # Center pixel values and intensities (to increase training speed and accuracy)
@@ -108,7 +114,7 @@ def main(run_config):
 
     # Load ResNet-50 network for fine tuning
     logger.info("Building the model...")
-    base_model = ResNet50(weights="imagenet", include_top=False, input_tensor=Input(shape=(224, 224, 3)))
+    base_model = ResNet50(weights="imagenet", include_top=False, input_tensor=Input(shape=image_size))
     head_model = base_model.output
     head_model = AveragePooling2D(pool_size=(7, 7))(head_model)
     head_model = Flatten(name="flatten")(head_model)

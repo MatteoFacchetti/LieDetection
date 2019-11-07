@@ -5,7 +5,12 @@ test: '../data/test'        # Input test data for preprocessing and modelling
 modelling:
   model_name: 'ResNet50'
   epochs: 50                # Number of epochs
+  image_size:               # Image size
+  - 224
+  - 224
+  - 3
   sample_mode: True         # True if you want to run the model on a limited amount of data, otherwise False
+  data_augmentation: True   # True if you want to perform data augmentation, otherwise False
 
 evaluation:
   plot: 'evaluation/plots'  # Directory where the plots are saved
