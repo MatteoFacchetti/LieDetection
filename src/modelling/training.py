@@ -4,9 +4,11 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import random
 
 import cv2
 from imutils import paths
+from tqdm import tqdm
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -34,26 +36,32 @@ def main(run_config):
     # Read configuration file
     run_cfg = file_utils.read_yaml(run_config)
     train = run_cfg["train"]
-    epochs = run_cfg["modelling"]["epochs"]
     plot_to_file = run_cfg["evaluation"]["plot_to_file"]
     plot_path = run_cfg["evaluation"]["plot"]
     model_name = run_cfg["modelling"]["model_name"]
+    sample_mode = run_cfg["modelling"]["sample_mode"]
 
     # Grab the list of images and initialize the lists data and images
     logger.info("Loading images...")
     image_paths = list(paths.list_images(train))
+    if sample_mode:
+        n_frames = 100
+        epochs = 5
+        image_paths = random.choices(image_paths, k=n_frames)
+    else:
+        n_frames = 88017
+        epochs = run_cfg["modelling"]["epochs"]
     data = []
     labels = []
 
     # Loop over the image paths
     start_time = timer(None)
-    counter = 0
-    for image_path in image_paths:
+    for i in tqdm(range(n_frames)):
         # Extract the class label from the filename
+        image_path = image_paths[i]
         label = image_path.split(os.path.sep)[-2]
 
-        # Load the image
-        # TODO: reshape e rimappare i colori in base al pretrained model che andiamo a usare
+        # Load the image (reshape e rimappare i colori in base al pretrained model che andiamo a usare)
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, (224, 224))
@@ -61,17 +69,13 @@ def main(run_config):
         # Update data and label lists
         data.append(image)
         labels.append(label)
-
-        # Print update
-        counter += 1
-        if counter % 10000 == 0:
-            logger.info(f"Loaded {counter} frames.")
     logger.info("Images loaded successfully.")
-    logger.info(f"Total number of frames loaded: {counter}")
+    logger.info(f"Total number of frames loaded: {n_frames}")
     timer(start_time)
 
     # Convert data and labels to numpy arrays
     logger.info("Processing data...")
+    os.environ['KMP_WARNINGS'] = 'off'
     data = np.array(data)
     labels = np.array(labels)
 
@@ -79,7 +83,7 @@ def main(run_config):
     lb = LabelBinarizer()
     labels = lb.fit_transform(labels)
 
-    # TODO: Train-test split (80%-20%) - Forse non serve, avendo già splittato a monte
+    # Train-test split (80%-20%)
     (X_train, X_test, y_train, y_test) = train_test_split(data, labels, test_size=0.2, stratify=labels, random_state=42)
 
     # Initialize training data augmentation object
@@ -97,8 +101,7 @@ def main(run_config):
     test_aug = ImageDataGenerator()
 
     # Center pixel values and intensities (to increase training speed and accuracy)
-    # TODO: Modificare i valori in base al pretrained model che usiamo
-    # Codice per calcolare manualmente l'intensità media dei pixel: X_train.mean(axis=(0, 1, 2))
+    # Se si vuole calcolare manualmente l'intensità media dei pixel: X_train.mean(axis=(0, 1, 2))
     mean = np.array([123.68, 116.779, 103.939], dtype="float32")
     train_aug.mean = mean
     test_aug.mean = mean
@@ -111,7 +114,7 @@ def main(run_config):
     head_model = Flatten(name="flatten")(head_model)
     head_model = Dense(512, activation="relu")(head_model)
     head_model = Dropout(0.5)(head_model)
-    head_model = Dense(len(lb.classes_), activation="softmax")(head_model)
+    head_model = Dense(1, activation="softmax")(head_model)
     model = Model(inputs=base_model.input, outputs=head_model)
 
     # Freeze the base model to prevent it from being updated during the training process
@@ -138,7 +141,7 @@ def main(run_config):
     # Evaluate the network
     logger.info("Evaluating network...")
     predictions = model.predict(X_test, batch_size=32)
-    print(classification_report(y_test.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_))
+    print(classification_report(y_test.argmax(axis=1), predictions.argmax(axis=1), target_names=["Lie"]))
 
     # Plot train loss and accuracy
     n = epochs
@@ -146,12 +149,13 @@ def main(run_config):
     plt.figure()
     plt.plot(np.arange(0, n), head.history["loss"], label="train_loss")
     plt.plot(np.arange(0, n), head.history["val_loss"], label="test_loss")
-    plt.plot(np.arange(0, n), head.history["acc"], label="train_acc")
-    plt.plot(np.arange(0, n), head.history["val_acc"], label="test_acc")
+    plt.plot(np.arange(0, n), head.history["accuracy"], label="train_acc")
+    plt.plot(np.arange(0, n), head.history["val_accuracy"], label="test_acc")
     plt.title("Train and Test Loss and Accuracy")
     plt.xlabel("Number of epochs")
     plt.ylabel("Loss/Accuracy")
     plt.legend(loc="lower left")
+    plt.show()
     if plot_to_file:
         plt.savefig(f"{plot_path}/loss_acc.png")
 
@@ -159,7 +163,7 @@ def main(run_config):
     logger.info("Saving model...")
     try:
         model.save(f"../models/{model_name}/estimator.model")
-    except FileNotFoundError:
+    except OSError:
         os.mkdir(f"../models/{model_name}")
         model.save(f"../models/{model_name}/estimator.model")
 
