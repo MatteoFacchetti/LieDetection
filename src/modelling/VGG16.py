@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pickle
 import random
 import warnings
+warnings.filterwarnings('ignore')
 
 import cv2
 from imutils import paths
@@ -14,7 +15,7 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from keras.preprocessing.image import ImageDataGenerator
-from keras.applications import ResNet50
+from keras.applications import ResNet50, VGG16
 from keras.layers import Input
 from keras.layers.pooling import AveragePooling2D
 from keras.layers.core import Dropout
@@ -94,6 +95,7 @@ def main(run_config):
     if data_augmentation:
         logger.info("Performing data augmentation...")
         train_aug = ImageDataGenerator(
+            rescale=1./255,
             rotation_range=30,
             zoom_range=0.15,
             width_shift_range=0.2,
@@ -101,26 +103,27 @@ def main(run_config):
             shear_range=0.15,
             fill_mode="nearest"
         )
+        test_aug = ImageDataGenerator(rescale=1./255)
     else:
         logger.info("Data augmentation not performed")
         train_aug = ImageDataGenerator()
-    test_aug = ImageDataGenerator()
+        test_aug = ImageDataGenerator()
 
     # Center pixel values and intensities (to increase training speed and accuracy)
     # Se si vuole calcolare manualmente l'intensità media dei pixel: X_train.mean(axis=(0, 1, 2))
-    mean = np.array([123.68, 116.779, 103.939], dtype="float32")
-    train_aug.mean = mean
-    test_aug.mean = mean
+    # mean = np.array([123.68, 116.779, 103.939], dtype="float32")
+    # train_aug.mean = mean
+    # test_aug.mean = mean
 
     # Load ResNet-50 network for fine tuning
     logger.info("Building the model...")
-    base_model = ResNet50(weights="imagenet", include_top=False, input_tensor=Input(shape=image_size[0:3]))
+    base_model = VGG16(weights="imagenet", include_top=False, input_tensor=Input(shape=image_size[0:3]))
     head_model = base_model.output
     head_model = AveragePooling2D(pool_size=image_size[3:5])(head_model)
     head_model = Flatten(name="flatten")(head_model)
     head_model = Dense(512, activation="relu")(head_model)
     head_model = Dropout(0.5)(head_model)
-    head_model = Dense(1, activation="softmax")(head_model)
+    head_model = Dense(1, activation="sigmoid")(head_model)
     model = Model(inputs=base_model.input, outputs=head_model)
 
     # Freeze the base model to prevent it from being updated during the training process
@@ -136,10 +139,10 @@ def main(run_config):
     logger.info("Training head of the model...")
     start_time = timer(None)
     head = model.fit_generator(
-        train_aug.flow(X_train, y_train, batch_size=32),
-        steps_per_epoch=len(X_train) // 32,
+        train_aug.flow(X_train, y_train, batch_size=20),
+        steps_per_epoch=len(X_train) // 20,
         validation_data=test_aug.flow(X_test, y_test),
-        validation_steps=len(X_test) // 32,
+        validation_steps=len(X_test) // 20,
         epochs=epochs
     )
     timer(start_time)
@@ -182,6 +185,5 @@ def main(run_config):
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level=logging.INFO, format=log_fmt)
-    warnings.filterwarnings('ignore', category=FutureWarning)
 
     main()
