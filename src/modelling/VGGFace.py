@@ -15,7 +15,7 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from keras.preprocessing.image import ImageDataGenerator
-from keras.applications import ResNet50, VGG16
+from keras_vggface.vggface import VGGFace
 from keras.layers import Input
 from keras.layers.pooling import AveragePooling2D
 from keras.layers.core import Dropout
@@ -23,6 +23,7 @@ from keras.layers.core import Flatten
 from keras.layers.core import Dense
 from keras.models import Model
 from keras.optimizers import SGD
+from keras.callbacks import CSVLogger, EarlyStopping
 
 from utils import file_utils
 from utils.model_utils import timer
@@ -106,9 +107,9 @@ def main(run_config):
         train_aug = ImageDataGenerator(rescale=1./255)
     test_aug = ImageDataGenerator(rescale=1./255)
 
-    # Load VGG16 network for fine tuning
+    # Load VGGFace network for fine tuning
     logger.info("Building the model...")
-    base_model = VGG16(weights="imagenet", include_top=False, input_tensor=Input(shape=image_size[0:3]))
+    base_model = VGGFace(weights="vggface", include_top=False, input_tensor=Input(shape=image_size[0:3]))
     head_model = base_model.output
     head_model = AveragePooling2D(pool_size=image_size[3:5])(head_model)
     head_model = Flatten(name="flatten")(head_model)
@@ -126,6 +127,20 @@ def main(run_config):
     opt = SGD(lr=1e-4, momentum=0.9, decay=1e-4 / epochs)
     model.compile(loss="binary_crossentropy", optimizer=opt, metrics=["accuracy"])
 
+    # Callbacks: early stopping and CSVLogger
+    earlystop = EarlyStopping(
+        monitor='val_acc',
+        min_delta=0.001,
+        patience=10,
+        verbose=1,
+        mode='auto'
+    )
+    if os.path.exists(f"../models/{model_name}"):
+        csv_logger = CSVLogger(f"../models/{model_name}/CSVLogger.log")
+    else:
+        os.mkdir(f"../models/{model_name}")
+        csv_logger = CSVLogger(f"../models/{model_name}/CSVLogger.log")
+
     # Train the head of the network (fine tuning)
     logger.info("Training head of the model...")
     start_time = timer(None)
@@ -134,7 +149,8 @@ def main(run_config):
         steps_per_epoch=len(X_train) // 20,
         validation_data=test_aug.flow(X_test, y_test),
         validation_steps=len(X_test) // 20,
-        epochs=epochs
+        epochs=epochs,
+        callbacks=[earlystop, csv_logger]
     )
     timer(start_time)
 
@@ -161,11 +177,7 @@ def main(run_config):
     # Save the model
     if not sample_mode:
         logger.info("Saving model...")
-        try:
-            model.save(f"../models/{model_name}/estimator.model")
-        except OSError:
-            os.mkdir(f"../models/{model_name}")
-            model.save(f"../models/{model_name}/estimator.model")
+        model.save(f"../models/{model_name}/estimator.model")
 
         # Save the label binarizer
         f = open(f"../models/{model_name}/label_binarizer.pickle", "wb")
@@ -174,6 +186,7 @@ def main(run_config):
 
         # Save plot
         plt.savefig(f"../models/{model_name}/loss_acc.png")
+        logger.info("Model saved successfully.")
 
 
 if __name__ == '__main__':
