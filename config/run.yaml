@@ -2,6 +2,8 @@ train: '../data/train'      # Input train data for preprocessing and modelling
 
 test: '../data/test'        # Input test data for preprocessing and modelling
 
+validation: '../data/validation' # Input validation data for preprocessing and modelling
+
 modelling:
   model_name: 'VGGFace'
   epochs: 50                # Number of epochs
@@ -13,40 +15,77 @@ modelling:
   - 7                       # Pool size 2
   sample_mode: False        # True if you want to run the model on a limited amount of data, otherwise False
   data_augmentation: True   # True if you want to perform data augmentation, otherwise False
+  vgg_model: 'vgg16'        # vgg16 resnet50 senet50
 
-test_videos:                # What videos compose the evaluation set
+test_videos:                # What videos compose the test set
+  - 18
+  - 156
+  - 29
+  - 208
+  - 277
+  - 56
+  - 13
+  - 201
+  - 249
+  - 256
+  - 176
+  - 178
+  - 278
+  - 111
+  - 75
+  - 177
+  - 267
+  - 268
+  - 147
+  - 112
+  - 0
+  - 218
+  - 276
+  - 189
+  - 24
+  - 1
+  - 171
+  - 223
+  - 55
+  - 16
+  - 30
+  - 77
+  - 62
+
+validation_videos:          # What videos compose the validation set
+  - 3
   - 5
+  - 8
   - 11
   - 14
   - 22
+  - 23
   - 32
-  - 42
-  - 53
+  - 59
   - 63
-  - 73
   - 81
-  - 90
-  - 100
-  - 110
+  - 118
   - 120
+  - 125
   - 130
-  - 140
+  - 148
   - 150
+  - 151
   - 160
+  - 167
   - 170
   - 180
+  - 186
   - 190
-  - 200
   - 210
+  - 212
+  - 214
   - 220
+  - 221
   - 230
   - 240
+  - 241
   - 250
+  - 259
   - 260
   - 270
-  - 280
-  - 290
-  - 299
-  - 307
-  - 314
-  - 324

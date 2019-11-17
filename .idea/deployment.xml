@@ -5,7 +5,7 @@
       <paths name="3005019@dsba.sm.unibocconi.it:22">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/3005019/Deep Learning/LieDetection" local="$PROJECT_DIR$" web="" />
+            <mapping deploy="/home/3005019/Deep Learning/LieDetection/home/3005019/Deep Learning/LieDetection" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>

@@ -43,6 +43,7 @@ def main(run_config):
     sample_mode = run_cfg["modelling"]["sample_mode"]
     data_augmentation = run_cfg["modelling"]["data_augmentation"]
     image_size = tuple(run_cfg["modelling"]["image_size"])
+    vgg_model = run_cfg["modelling"]["vgg_model"]
 
     # Grab the list of images and initialize the lists data and images
     logger.info("Loading images...")
@@ -109,7 +110,7 @@ def main(run_config):
 
     # Load VGGFace network for fine tuning
     logger.info("Building the model...")
-    base_model = VGGFace(weights="vggface", include_top=False, input_tensor=Input(shape=image_size[0:3]))
+    base_model = VGGFace(model=vgg_model, weights="vggface", include_top=False, input_tensor=Input(shape=image_size[0:3]))
     head_model = base_model.output
     head_model = AveragePooling2D(pool_size=image_size[3:5])(head_model)
     head_model = Flatten(name="flatten")(head_model)
