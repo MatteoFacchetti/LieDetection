@@ -12,7 +12,6 @@ import cv2
 from imutils import paths
 from tqdm import tqdm
 from sklearn.preprocessing import LabelBinarizer
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from keras.preprocessing.image import ImageDataGenerator
 from keras_vggface.vggface import VGGFace
@@ -33,63 +32,27 @@ from utils.model_utils import timer
 @click.option("--run_config")
 def main(run_config):
     # Initialize
-    logger = logging.getLogger(__name__)
     logger.info(f"Run configuration file: {run_config}")
 
     # Read configuration file
     run_cfg = file_utils.read_yaml(run_config)
     train = run_cfg["train"]
+    test = run_cfg["test"]
     model_name = run_cfg["modelling"]["model_name"]
     sample_mode = run_cfg["modelling"]["sample_mode"]
     data_augmentation = run_cfg["modelling"]["data_augmentation"]
     image_size = tuple(run_cfg["modelling"]["image_size"])
     vgg_model = run_cfg["modelling"]["vgg_model"]
 
-    # Grab the list of images and initialize the lists data and images
-    logger.info("Loading images...")
-    image_paths = list(paths.list_images(train))
-    image_paths = [image for i, image in enumerate(image_paths) if i % 3 == 0]
-    if sample_mode:
-        n_frames = 100
-        epochs = 5
-        image_paths = random.choices(image_paths, k=n_frames)
-    else:
-        n_frames = len(image_paths)
-        epochs = run_cfg["modelling"]["epochs"]
-    data = []
-    labels = []
-
-    # Loop over the image paths
-    start_time = timer(None)
-    for i in tqdm(range(n_frames)):
-        # Extract the class label from the filename
-        image_path = image_paths[i]
-        label = image_path.split(os.path.sep)[-2]
-
-        # Load the image (reshape e rimappare i colori in base al pretrained model che andiamo a usare)
-        image = cv2.imread(image_path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, image_size[0:2])
-
-        # Update data and label lists
-        data.append(image)
-        labels.append(label)
-    logger.info("Images loaded successfully.")
-    logger.info(f"Total number of frames loaded: {n_frames}")
-    timer(start_time)
-
-    # Convert data and labels to numpy arrays
-    logger.info("Processing data...")
-    os.environ['KMP_WARNINGS'] = 'off'
-    data = np.array(data)
-    labels = np.array(labels)
+    # Load train and test images
+    X_train, y_train, epochs = initialize(train, run_cfg, image_size, sample_mode)
+    X_test, y_test, epochs = initialize(test, run_cfg, image_size, sample_mode)
 
     # Perform one-hot encoding on the labels
     lb = LabelBinarizer()
-    labels = lb.fit_transform(labels)
-
-    # Train-test split (80%-20%)
-    (X_train, X_test, y_train, y_test) = train_test_split(data, labels, test_size=0.2, stratify=labels, random_state=42)
+    y_train = lb.fit_transform(y_train)
+    lb = LabelBinarizer()
+    y_test = lb.fit_transform(y_test)
 
     # Initialize training data augmentation object
     if data_augmentation:
@@ -190,8 +153,52 @@ def main(run_config):
         logger.info("Model saved successfully.")
 
 
+def initialize(group, run_cfg, image_size, sample_mode):
+    # Grab the list of images and initialize the lists data and images
+    logger.info("Loading images...")
+    image_paths = list(paths.list_images(group))
+    image_paths = [image for i, image in enumerate(image_paths) if i % 3 == 0]
+    if sample_mode:
+        n_frames = 100
+        epochs = 5
+        image_paths = random.choices(image_paths, k=n_frames)
+    else:
+        n_frames = len(image_paths)
+        epochs = run_cfg["modelling"]["epochs"]
+    data = []
+    labels = []
+
+    # Loop over the image paths
+    start_time = timer(None)
+    for i in tqdm(range(n_frames)):
+        # Extract the class label from the filename
+        image_path = image_paths[i]
+        label = image_path.split(os.path.sep)[-2]
+
+        # Load the image (reshape e rimappare i colori in base al pretrained model che andiamo a usare)
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.resize(image, image_size[0:2])
+
+        # Update data and label lists
+        data.append(image)
+        labels.append(label)
+    logger.info("Images loaded successfully.")
+    logger.info(f"Total number of frames loaded: {n_frames}")
+    timer(start_time)
+
+    # Convert data and labels to numpy arrays
+    logger.info("Processing data...")
+    os.environ['KMP_WARNINGS'] = 'off'
+    data = np.array(data)
+    labels = np.array(labels)
+
+    return data, labels, epochs
+
+
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level=logging.INFO, format=log_fmt)
+    logger = logging.getLogger(__name__)
 
     main()
