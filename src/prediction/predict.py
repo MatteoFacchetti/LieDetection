@@ -25,7 +25,7 @@ def main(run_config, out):
     # Load trained model and label binarizer
     logger.info("Loading model and label binarizer...")
     model = load_model("../models/VGGFaces_16/estimator.model")
-    lb = pickle.loads("../models/VGGFaces_16/label_binarizer.pickle")
+    lb = pickle.loads(open("../models/VGGFaces_16/label_binarizer.pickle", "rb").read())
 
     # Initialize the predictions queue
     q = deque(maxlen=128)
@@ -34,6 +34,7 @@ def main(run_config, out):
     logger.info("Loading validation images...")
     image_paths = list(paths.list_images(validation))[: 600]
     image_paths = [image for i, image in enumerate(image_paths) if i % 3 == 0]
+    print(image_paths)
 
     # Loop over the image paths
     writer = None
@@ -41,9 +42,14 @@ def main(run_config, out):
     n_frames = len(image_paths)
     start_time = timer(None)
     for i in tqdm(range(n_frames)):
+
         # Load the images
         image_path = image_paths[i]
         image = cv2.imread(image_path)
+
+        # If the frame dimensions are empty, grab them
+        if w is None or h is None:
+            (h, w) = image.shape[:2]
         output = image.copy()
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, image_size[0:2])
@@ -64,13 +70,14 @@ def main(run_config, out):
         # Check if the video writer is None
         if writer is None:
             # Initialize video writer
-            fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-            writer = cv2.VideoWriter(out, fourcc, 30, (w, h), True)
+            fourcc = cv2.VideoWriter_fourcc(*"XVID")
+            writer = cv2.VideoWriter(out, fourcc, 30, True, (w, h))
 
         # Write the output frame to disk
         writer.write(output)
 
         # Press q to stop the loop
+        # cv2.imshow("Output", output)
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
             break
@@ -78,6 +85,8 @@ def main(run_config, out):
     # Clean up and done
     logger.info("Cleaning up...")
     writer.release()
+    logger.info("Done")
+    timer(start_time)
 
 
 if __name__ == '__main__':
