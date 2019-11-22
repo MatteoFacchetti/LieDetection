@@ -19,43 +19,40 @@ from utils import file_utils
 def main(run_config, out):
     # Read configuration file
     run_cfg = file_utils.read_yaml(run_config)
-    validation = run_cfg["validation"]
     image_size = tuple(run_cfg["modelling"]["image_size"])
 
     # Load trained model and label binarizer
     logger.info("Loading model and label binarizer...")
     model = load_model("../models/VGGFaces_16/estimator.model")
     lb = pickle.loads(open("../models/VGGFaces_16/label_binarizer.pickle", "rb").read())
+    lb.classes_ = np.char.replace(lb.classes_, "0_crop", "Lie")
+    lb.classes_ = np.char.replace(lb.classes_, "1_crop", "Truth")
 
     # Initialize the predictions queue
     q = deque(maxlen=128)
 
-    # Grab the list of images and initialize the lists data and images
-    logger.info("Loading validation images...")
-    image_paths = list(paths.list_images(validation))[: 600]
-    image_paths = [image for i, image in enumerate(image_paths) if i % 3 == 0]
-    print(image_paths)
-
-    # Loop over the image paths
+    # Loop over the frames in the video
+    vs = cv2.VideoCapture("../data/prediction/file.mp4")
     writer = None
     (w, h) = (None, None)
-    n_frames = len(image_paths)
     start_time = timer(None)
-    for i in tqdm(range(n_frames)):
+    while True:
+        # read the next frame from the file
+        (grabbed, frame) = vs.read()
 
-        # Load the images
-        image_path = image_paths[i]
-        image = cv2.imread(image_path)
+        # if the frame was not grabbed, then we have reached the end of the stream
+        if not grabbed:
+            break
 
         # If the frame dimensions are empty, grab them
         if w is None or h is None:
-            (h, w) = image.shape[:2]
-        output = image.copy()
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, image_size[0:2])
+            (h, w) = frame.shape[:2]
+        output = frame.copy()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = cv2.resize(frame, image_size[0:2])
 
         # Make predictions on the frame and update queue
-        pred = model.predict(np.expand_dims(image, axis=0))[0]
+        pred = model.predict(np.expand_dims(frame, axis=0))[0]
         q.append(pred)
 
         # Perform prediction averaging
@@ -64,27 +61,22 @@ def main(run_config, out):
         label = lb.classes_[r]
 
         # Draw the activity on the output frame
-        text = f"Liar? {label}"
-        cv2.putText(output, text, (35, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.25, (0, 255, 0), 5)
+        text = f"{label}"
+        cv2.putText(output, text, (35, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
         # Check if the video writer is None
         if writer is None:
             # Initialize video writer
-            fourcc = cv2.VideoWriter_fourcc(*"XVID")
-            writer = cv2.VideoWriter(out, fourcc, 30, True, (w, h))
+            fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+            writer = cv2.VideoWriter(out, fourcc, 30, (w, h))
 
         # Write the output frame to disk
         writer.write(output)
 
-        # Press q to stop the loop
-        # cv2.imshow("Output", output)
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
-            break
-
     # Clean up and done
     logger.info("Cleaning up...")
     writer.release()
+    vs.release()
     logger.info("Done")
     timer(start_time)
 
