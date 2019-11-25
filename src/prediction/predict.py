@@ -1,10 +1,8 @@
 import click
 import logging
 
-from tqdm import tqdm
 from keras.models import load_model
 from collections import deque
-from imutils import paths
 import numpy as np
 import pickle
 import cv2
