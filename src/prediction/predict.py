@@ -13,8 +13,9 @@ from utils import file_utils
 
 @click.command()
 @click.option("--run_config")
-@click.option("--out")
-def main(run_config, out):
+@click.option("--input_video")
+@click.option("--output_video")
+def main(run_config, input_video, output_video):
     # Read configuration file
     run_cfg = file_utils.read_yaml(run_config)
     image_size = tuple(run_cfg["modelling"]["image_size"])
@@ -30,7 +31,7 @@ def main(run_config, out):
     q = deque(maxlen=128)
 
     # Loop over the frames in the video
-    vs = cv2.VideoCapture("../data/prediction/file.mp4")
+    vs = cv2.VideoCapture(input_video)
     writer = None
     (w, h) = (None, None)
     start_time = timer(None)
@@ -66,7 +67,7 @@ def main(run_config, out):
         if writer is None:
             # Initialize video writer
             fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-            writer = cv2.VideoWriter(out, fourcc, 30, (w, h))
+            writer = cv2.VideoWriter(output_video, fourcc, 30, (w, h))
 
         # Write the output frame to disk
         writer.write(output)
